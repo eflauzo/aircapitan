@@ -1,0 +1,1 @@
+uv run python3 src/aircapitan/game/game.py

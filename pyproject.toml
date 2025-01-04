@@ -1,0 +1,18 @@
+[project]
+name = "aircapitan"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["jsbsim>=1.2.1", "pygame>=2.6.1"]
+
+[tool.uv.sources]
+aircapitan = { workspace = true }
+#packages = ["src/aircapitan"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aircapitan"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
