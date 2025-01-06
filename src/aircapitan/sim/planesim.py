@@ -45,8 +45,23 @@ class PlaneSim(object):
         self.fdm['ic/h-agl-ft'] = 500.0
         self.fdm['ic/vc-kts'] = 60
 
-        # self.fdm.print_property_catalog()
+        self.all_properties = []
+        for property_raw in self.fdm.query_property_catalog('').split('\n'):
+            if ' (W)' in property_raw:
+                # ignore write only properies
+                continue
+            property_name = property_raw.replace(
+                ' (RW)', '').replace(' (R)', '')
+            self.all_properties.append(property_name)
+
         self.fdm.run_ic()
+
+    def dump_all_properties(self):
+        result = {}
+        for property_name in self.all_properties:
+            print('>>>', property_name)
+            result[property_name] = self.fdm[property_name]
+        return result
 
     @property
     def fdm_time_s(self):

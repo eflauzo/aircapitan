@@ -5,11 +5,17 @@ import math
 from aircapitan.sim.planesim import PlaneSim
 
 
+class AbstractPilot:
+    def process_inputs(self, sim):
+        raise RuntimeError("implement me")
+
+
 class AirPlaneGame:
 
-    def __init__(self, sim: PlaneSim):
+    def __init__(self, sim: PlaneSim, pilot: AbstractPilot):
 
         self.sim = sim
+        self.pilot = pilot
         pygame.init()
         self.clock = pygame.time.Clock()
 
@@ -30,6 +36,9 @@ class AirPlaneGame:
 
         self.roll_indicator_outter = pygame.image.load(os.path.join(
             assets_root, 'roll_indicator_outter.png')).convert()
+
+        self.shadow_image = pygame.image.load(os.path.join(
+            assets_root, 'shadow.png')).convert()
 
         self.info_text_font = pygame.font.SysFont('consolas', 12)
         self.height_to_width = 1.0
@@ -130,6 +139,8 @@ class AirPlaneGame:
         pygame.draw.rect(self.surface, (100, 100, 100), (0, y,
                          self.surface.get_width(), self.surface.get_height()))
 
+        self.draw_shadow()
+
     def draw_roll_indicator(self):
 
         roll = math.degrees(self.sim.plane_roll_rad)
@@ -148,6 +159,30 @@ class AirPlaneGame:
             self.roll_indicator_outter.get_width(
             ) / 2 - 10, self.roll_indicator_outter.get_height() / 2 + 10
 
+        ))
+
+    def draw_shadow(self):
+        fraction_length = self.sim.length_m / self.screen_width_m()
+        pitch = math.degrees(self.sim.plane_pitch_rad)
+
+        rotated_image_center = (
+            0, 0
+        )
+
+        rotated_sprite = pygame.transform.rotozoom(
+            self.shadow_image, 0.0, 1.0)
+
+        rotated_image_rect = rotated_sprite.get_rect(
+            center=rotated_image_center)
+
+        plane_x, plane_y = self.plane_location_on_screen()
+
+        meters_m_in_pixel = 1  # self.screen_height_m() / self.surface.get_height()
+
+        plane_y += 5 + ((self.sim.altitude_m / meters_m_in_pixel) * 10)
+
+        self.surface.blit(rotated_sprite, rotated_image_rect.move(
+            (plane_x, plane_y)
         ))
 
     def draw_plane(self):
@@ -228,64 +263,15 @@ class AirPlaneGame:
 
             dt = self.clock.tick(FPS)/1000
             self.sim.propagate(dt)
+            # print(self.sim.fdm.__dir__())
 
+            print(self.sim.dump_all_properties())
+
+            self.pilot.process_inputs(self.sim)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        pygame.quit()
-                        sys.exit()
-
-                if event.type == pygame.VIDEORESIZE:
-
-                    self.surface = pygame.display.set_mode((event.w, event.h),
-                                                           pygame.RESIZABLE)
-
-                keys = pygame.key.get_pressed()
-                if keys[pygame.K_EQUALS]:
-
-                    self.sim.set_cmd_thrust(self.sim.get_cmd_thrust() + 0.05)
-
-                if keys[pygame.K_MINUS]:
-
-                    self.sim.set_cmd_thrust(self.sim.get_cmd_thrust() - 0.05)
-
-                rudder = 0.0
-                if keys[pygame.K_COMMA]:
-                    rudder = -1.0
-
-                if keys[pygame.K_PERIOD]:
-                    rudder = 1.0
-
-                self.sim.set_cmd_rudder(rudder)
-
-                aileron = 0.0
-                if keys[pygame.K_LEFT]:
-                    aileron = 1.0
-
-                if keys[pygame.K_RIGHT]:
-                    aileron = -1.0
-
-                self.sim.set_cmd_aileron(aileron)
-
-                elevator = 0.0
-                if keys[pygame.K_UP]:
-                    elevator = 1.0
-
-                if keys[pygame.K_DOWN]:
-                    elevator = -1.0
-
-                self.sim.set_cmd_elevator(elevator)
-
-                if keys[pygame.K_q]:
-                    if self.sim.flap_deflection_rad < math.radians(50):
-                        self.sim.flap_deflection_rad += 0.08
-                if keys[pygame.K_a]:
-                    if self.sim.flap_deflection_rad > 0:
-                        self.sim.flap_deflection_rad -= 0.08
 
             self.surface.fill((255, 255, 255))
 
@@ -296,7 +282,65 @@ class AirPlaneGame:
             pygame.display.flip()
 
 
+# class ProcessInputs
+
+
+class HumanPilot:
+    def process_inputs(self, sim):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+
+            if event.type == pygame.VIDEORESIZE:
+
+                self.surface = pygame.display.set_mode((event.w, event.h),
+                                                       pygame.RESIZABLE)
+
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_EQUALS]:
+
+                sim.set_cmd_thrust(sim.get_cmd_thrust() + 0.05)
+
+            if keys[pygame.K_MINUS]:
+
+                sim.set_cmd_thrust(sim.get_cmd_thrust() - 0.05)
+
+            rudder = 0.0
+            if keys[pygame.K_COMMA]:
+                rudder = -1.0
+
+            if keys[pygame.K_PERIOD]:
+                rudder = 1.0
+
+            sim.set_cmd_rudder(rudder)
+
+            aileron = 0.0
+            if keys[pygame.K_LEFT]:
+                aileron = 1.0
+
+            if keys[pygame.K_RIGHT]:
+                aileron = -1.0
+
+            sim.set_cmd_aileron(aileron)
+
+            elevator = 0.0
+            if keys[pygame.K_UP]:
+                elevator = 1.0
+
+            if keys[pygame.K_DOWN]:
+                elevator = -1.0
+
+            sim.set_cmd_elevator(elevator)
+
+
 if __name__ == '__main__':
     sim = PlaneSim()
-    game = AirPlaneGame(sim)
+    human_pilot = HumanPilot()
+    game = AirPlaneGame(sim, human_pilot)
     game.run()
