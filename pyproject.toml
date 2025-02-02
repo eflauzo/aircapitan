@@ -4,11 +4,27 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["jsbsim>=1.2.1", "pygame>=2.6.1"]
+dependencies = [
+    "jsbsim>=1.2.1",
+    "matplotlib>=3.10.0",
+    "pandas>=2.2.3",
+    "pygame>=2.6.1",
+    "pytest>=8.3.4",
+    "torch>=2.5.1",
+]
 
 [tool.uv.sources]
 aircapitan = { workspace = true }
+torch = [{ index = "pytorch-cpu", marker = "platform_system != 'Darwin'" }]
+torchvision = [
+    { index = "pytorch-cpu", marker = "platform_system != 'Darwin'" },
+]
 #packages = ["src/aircapitan"]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aircapitan"]

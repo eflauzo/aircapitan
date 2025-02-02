@@ -3,6 +3,7 @@ import sys
 import os
 import math
 from aircapitan.sim.planesim import PlaneSim
+from aircapitan.instruments.base_instrument import BaseInstrument
 
 
 class AbstractPilot:
@@ -12,10 +13,10 @@ class AbstractPilot:
 
 class AirPlaneGame:
 
-    def __init__(self, sim: PlaneSim, pilot: AbstractPilot):
+    def __init__(self, sim: PlaneSim, components):
 
         self.sim = sim
-        self.pilot = pilot
+        self.components = components
         pygame.init()
         self.clock = pygame.time.Clock()
 
@@ -265,13 +266,15 @@ class AirPlaneGame:
             self.sim.propagate(dt)
             # print(self.sim.fdm.__dir__())
 
-            print(self.sim.dump_all_properties())
+            # print(self.sim.dump_all_properties())
 
-            self.pilot.process_inputs(self.sim)
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
+            for c in self.components:
+                c.poke(self.sim.sim_time_s)
+
+            # for event in pygame.event.get():
+            #    if event.type == pygame.QUIT:
+            #        pygame.quit()
+            #        sys.exit()
 
             self.surface.fill((255, 255, 255))
 
@@ -285,8 +288,13 @@ class AirPlaneGame:
 # class ProcessInputs
 
 
-class HumanPilot:
-    def process_inputs(self, sim):
+class HumanPilot(BaseInstrument):
+
+    def __init__(self, cycle_interval: float, sim: PlaneSim):
+        super().__init__(cycle_interval=cycle_interval)
+        self.sim = sim
+
+    def on_cycle(self, timestamp):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -305,11 +313,11 @@ class HumanPilot:
             keys = pygame.key.get_pressed()
             if keys[pygame.K_EQUALS]:
 
-                sim.set_cmd_thrust(sim.get_cmd_thrust() + 0.05)
+                self.sim.set_cmd_thrust(self.sim.get_cmd_thrust() + 0.05)
 
             if keys[pygame.K_MINUS]:
 
-                sim.set_cmd_thrust(sim.get_cmd_thrust() - 0.05)
+                self.sim.set_cmd_thrust(self.sim.get_cmd_thrust() - 0.05)
 
             rudder = 0.0
             if keys[pygame.K_COMMA]:
@@ -318,7 +326,7 @@ class HumanPilot:
             if keys[pygame.K_PERIOD]:
                 rudder = 1.0
 
-            sim.set_cmd_rudder(rudder)
+            self.sim.set_cmd_rudder(rudder)
 
             aileron = 0.0
             if keys[pygame.K_LEFT]:
@@ -327,7 +335,7 @@ class HumanPilot:
             if keys[pygame.K_RIGHT]:
                 aileron = -1.0
 
-            sim.set_cmd_aileron(aileron)
+            self.sim.set_cmd_aileron(aileron)
 
             elevator = 0.0
             if keys[pygame.K_UP]:
@@ -336,11 +344,11 @@ class HumanPilot:
             if keys[pygame.K_DOWN]:
                 elevator = -1.0
 
-            sim.set_cmd_elevator(elevator)
+            self.sim.set_cmd_elevator(elevator)
 
 
 if __name__ == '__main__':
     sim = PlaneSim()
-    human_pilot = HumanPilot()
-    game = AirPlaneGame(sim, human_pilot)
+    human_pilot = HumanPilot(0.05, sim)
+    game = AirPlaneGame(sim, [human_pilot])
     game.run()

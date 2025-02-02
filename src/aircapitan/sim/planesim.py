@@ -59,7 +59,7 @@ class PlaneSim(object):
     def dump_all_properties(self):
         result = {}
         for property_name in self.all_properties:
-            print('>>>', property_name)
+            # print('>>>', property_name)
             result[property_name] = self.fdm[property_name]
         return result
 
